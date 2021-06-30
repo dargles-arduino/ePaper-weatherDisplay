@@ -71,9 +71,17 @@ const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
 struct tm   timeinfo;
 long        startTime = millis();
+int         hours;
+int         minutes;
+int         seconds;
+// RTC variables that survive deep sleep
+RTC_DATA_ATTR int bat  = 670;
+RTC_DATA_ATTR int temp = 15;
+RTC_DATA_ATTR int pres = 1010;
+RTC_DATA_ATTR int hum  = 50;
 
 // Allocate the JSON document. Use https://arduinojson.org/v6/assistant to compute the capacity.
-const size_t capacity = JSON_OBJECT_SIZE(3) + JSON_ARRAY_SIZE(2) + 60;
+const size_t capacity = JSON_OBJECT_SIZE(5) + JSON_ARRAY_SIZE(2) + 60;
 DynamicJsonDocument readings(capacity);
 
 // Needed to create the display instance below
@@ -102,6 +110,8 @@ void setup()
     Serial.begin(115200);
     // Send program details to serial output
     flash.message(PROG, VER, BUILD);
+    Serial.print("JSON array size: ");
+    Serial.println(capacity);
     
     // Start up the ePaper display
     SPI.begin(EPD_SCLK, EPD_MISO, EPD_MOSI);
@@ -126,6 +136,8 @@ void setup()
     int runTime = (millis() - startTime) / 1000;
     Serial.print("Runtime is: ");
     Serial.println(runTime);
+    Serial.println("Stored values are:");
+    Serial.println(String(bat)+", "+String(temp)+", "+String(pres));
 
     if(gotTime){
       char timeStringBuff[8]; //50 chars should be enough
@@ -147,8 +159,10 @@ void setup()
       display.setFont(&FreeSans12pt7b);
       display.setCursor(0,55);
       display.print("Battery: ");
+      display.setCursor(144,55);
+      if(readings["bat"].as<int>()>bat)display.print("^");
+      if(readings["bat"].as<int>()<bat)display.print("v");
       float value = (readings["bat"].as<float>());
-      //String next = String(value);
       display.setCursor(155,55);
       display.setFont(&FreeSansBold12pt7b);
       display.print(value/139);
@@ -156,6 +170,9 @@ void setup()
       display.println(" V");
       display.setFont(&FreeSans12pt7b);
       display.print("Temperature: ");
+      display.setCursor(144,85);
+      if(readings["temp"].as<int>()>temp)display.print("^");
+      if(readings["temp"].as<int>()<temp)display.print("v");
       display.setCursor(155,85);
       display.setFont(&FreeSansBold12pt7b);
       display.print(readings["temp"].as<int>());
@@ -167,12 +184,19 @@ void setup()
       display.println("C");
       display.setFont(&FreeSans12pt7b);
       display.print("Pressure: ");
+      display.setCursor(144,115);
+      if(readings["press"].as<int>()>pres)display.print("^");
+      if(readings["press"].as<int>()<pres)display.print("v");
       display.setCursor(155,115);
       display.setFont(&FreeSansBold12pt7b);
-      display.print(readings["press"].as<float>(), 0);
+      display.print(readings["press"].as<int>());
       display.setFont(&FreeSansBold9pt7b);
       display.print(" mb");      
       display.update();
+      // Now update the RTC data variables
+      bat = readings["bat"].as<int>();
+      temp = readings["temp"].as<int>();
+      pres = readings["press"].as<int>();
     }  
     display.powerDown();
 
@@ -181,8 +205,13 @@ void setup()
     Serial.print("Total run time: ");
     Serial.println((millis()-startTime)/1000);
     Serial.println("\nPowering down...");
+    // Work out how many minutes to sleep for
+    int duration = minutes + SLEEPTIME - timeinfo.tm_min + 5;
+    if(duration>60) duration = duration - 60;
+    Serial.print("Sleep time is: ");
+    Serial.println(duration);
     // Set wake-up timer
-    esp_sleep_enable_timer_wakeup((SLEEPTIME*60)*1000000ULL);
+    esp_sleep_enable_timer_wakeup((duration*60)*1000000ULL);
     // Allow manual restart
     esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
     esp_deep_sleep_start();
@@ -262,6 +291,12 @@ bool getWeather()
       Serial.println(readings["temp"].as<float>(), 1);
       Serial.println(readings["press"].as<float>(), 0);
       Serial.println(readings["hum"][1].as<int>());
+      Serial.println(readings["time"].as<String>());
+      hours = (readings["time"].as<String>()).substring(0,2).toInt();
+      minutes = (readings["time"].as<String>()).substring(3,5).toInt();
+      seconds = (readings["time"].as<String>()).substring(6).toInt();
+      Serial.print("minutes: ");
+      Serial.println(minutes);
       
       result = true;
     }
