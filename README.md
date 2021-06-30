@@ -11,7 +11,7 @@ There's quite a bit going on:
 3) We then contact the Internet time server so we know what time it is (used later on).
 4) If that goes to plan, we then contact my weather server and get a JSON response with my latest weather data in.
 5) If that's all gone to plan, we then extract the weather data from the JSON feed and display it on the ePaper screen. 
-6) The values are stored in the RTC memory (so it survives deep sleep), and next time, the new values are comared so that the display shows whether the new values are rising, falling, or staying steady.
+6) The values are stored in the RTC memory (so it survives deep sleep), and next time, the new values are compared so that the display shows whether the new values are rising, falling, or staying steady.
 7) We then work out how long to wait so that, next time, we awake about 5 minutes after the latest reading on my weather server (readings are once an hour).
 8) Once we're in step, the display should wake up once an hour, update the weather values, then go back to sleep again.
 
