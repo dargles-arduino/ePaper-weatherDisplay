@@ -207,7 +207,7 @@ void setup()
     Serial.println("\nPowering down...");
     // Work out how many minutes to sleep for
     int duration = minutes + SLEEPTIME - timeinfo.tm_min + 5;
-    if(duration>60) duration = duration - 60;
+    if(duration>62) duration = duration - 60;
     Serial.print("Sleep time is: ");
     Serial.println(duration);
     // Set wake-up timer
